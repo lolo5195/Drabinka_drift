@@ -9,7 +9,7 @@ def _make_positive_results(count: int) -> list[QualificationResult]:
 
     Driver i gets run1 = 100 - i (and run2 = 0), so higher id = weaker score.
     After sorting: id 0 is 1st, id 1 is 2nd, ..., id (count-1) is last.
-    Note: (N, 0) is NOT a zero result — only (0, 0) is is_zero.
+    Note: (N, 0) is NOT a zero result — only (0, 0) has is_zero == True.
     """
     drivers = [Driver(id=i, name=f"Driver {i}") for i in range(count)]
     return [
