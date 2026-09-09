@@ -28,7 +28,8 @@ class Match:
     slot_top: Driver | None = None # None = "-" (free spot)
     slot_bottom: Driver | None = None
     winner: Driver | None = None
-    winner_goes_to: tuple[str, str] | None = None # (match_id, top | bottom )
+    # Destination: (match_id, "top" | "bottom") or ("PODIUM", place).
+    winner_goes_to: tuple[str, str] | None = None
     loser_goes_to: tuple[str, str] | None = None
 
 @dataclass
