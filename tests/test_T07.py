@@ -1,5 +1,6 @@
 """T-07: console prototype — standings printout, bracket printout, input loop."""
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -233,6 +234,8 @@ def test_cli_demo_runs_as_script():
         capture_output=True,
         text=True,
         encoding="utf-8",
+        # Polish names must survive a console that is not UTF-8 by default.
+        env={**os.environ, "PYTHONUTF8": "1"},
         cwd=project_root,
         timeout=30,
     )
