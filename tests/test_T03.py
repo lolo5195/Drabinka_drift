@@ -62,7 +62,36 @@ def test_sort_tie_breaker_on_second_run(drivers):
     assert sorted_results[1].driver == d2
 
 
-# 4. Skrajne przypadki (Edge Cases)
+# 4. Pełny remis (identyczna para wyników) -> kolejność wpisania (PLAN §2.1: stabilne sorted)
+def test_sort_full_tie_keeps_input_order(drivers):
+    d1, d2, _ = drivers
+
+    # d2 wpisany jako pierwszy, choć ma wyższe id — decyduje wyłącznie kolejność wpisania
+    results = [
+        QualificationResult(driver=d2, run1=81, run2=76),
+        QualificationResult(driver=d1, run1=81, run2=76),
+    ]
+
+    sorted_results = sort_qualification_results(results)
+
+    assert [r.driver for r in sorted_results] == [d2, d1]
+
+
+# 5. (0,81) sortuje się jak best=81, a nie jak wynik zerowy
+def test_sort_zero_first_run_counts_as_best_81(drivers):
+    d1, d2, _ = drivers
+
+    results = [
+        QualificationResult(driver=d2, run1=80, run2=79),   # Best: 80
+        QualificationResult(driver=d1, run1=0, run2=81),    # Best: 81, 2nd: 0 -> wyżej
+    ]
+
+    sorted_results = sort_qualification_results(results)
+
+    assert [r.driver for r in sorted_results] == [d1, d2]
+
+
+# 6. Skrajne przypadki (Edge Cases)
 def test_sort_empty_list():
     assert sort_qualification_results([]) == []
 
