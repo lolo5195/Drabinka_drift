@@ -85,3 +85,18 @@ def test_split_35_positive_overflow_goes_to_extra():
     assert len(extra) == 3
     assert [r.driver.id for r in extra] == [32, 33, 34]
     assert all(not r.is_zero for r in extra)
+
+
+# --- T-04 opis / §2.1: rows without a name are ignored before sorting ---
+
+def test_split_ignores_rows_without_name():
+    named = QualificationResult(driver=Driver(id=1, name="Driver 1"), run1=70, run2=0)
+    unnamed_scored = QualificationResult(driver=Driver(id=2, name=""), run1=90, run2=0)
+    unnamed_zero = QualificationResult(driver=Driver(id=3, name="   "), run1=0, run2=0)
+
+    main, extra = split_standings([unnamed_scored, named, unnamed_zero])
+
+    # Unnamed rows appear in neither table, even though one of them scored higher
+    assert main[0] is named
+    assert main[1:] == [None] * 31
+    assert extra == []

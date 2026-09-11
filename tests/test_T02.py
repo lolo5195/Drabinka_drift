@@ -12,6 +12,7 @@ def test_qualification_result():
     res2 = QualificationResult(driver=driver, run1=0, run2=81)
     assert res2.best == 81
     assert res2.worst == 0
+    assert not res2.is_zero   # tylko (0,0) jest zerem
 
     res3 = QualificationResult(driver=driver, run1=0, run2=0)
     assert res3.is_zero

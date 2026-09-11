@@ -1,11 +1,12 @@
 from models import QualificationResult
 
-def sort_key(r: QualificationResult) -> tuple[int, int, int]:
+def sort_key(r: QualificationResult) -> tuple[int, int]:
     """
     Sort key for QualificationResult.
-    Sort by best run (descending), then by worst run (descending) then by driver ID (ascending).
+    Sort by best run (descending), then by worst run (descending).
+    A full tie keeps the input order because sorted() is stable (PLAN §2.1).
     """
-    return (-r.best, -r.worst, r.driver.id)
+    return (-r.best, -r.worst)
 
 def sort_qualification_results(results: list[QualificationResult]) -> list[QualificationResult]:
     """
@@ -18,8 +19,9 @@ def split_standings(results: list[QualificationResult]) -> tuple[list[Qualificat
     Zwraca (miejsca 1-32, miejsca 33+)
     None w tabeli głównej = wiersz wypełniony myślnikami
     """
-    scored = sort_qualification_results([r for r in results if not r.is_zero])
-    zeros = [r for r in results if r.is_zero]
+    named = [r for r in results if r.driver.name.strip()]  # rows without a name are ignored
+    scored = sort_qualification_results([r for r in named if not r.is_zero])
+    zeros = [r for r in named if r.is_zero]
     main = scored[:32] + [None] * max(0, 32 - len(scored))
     extra = scored[32:] + zeros
     return main, extra
