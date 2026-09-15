@@ -66,7 +66,7 @@ def test_header_uses_client_accent_colour():
         (56, 81, ("regular", "bold")),
         (0, 81, ("regular", "bold")),
         (81, 81, ("bold", "bold")),
-        (0, 0, ("regular", "regular")),
+        (0, 0, ("bold", "bold")),
     ],
 )
 def test_score_weights(run1, run2, expected):

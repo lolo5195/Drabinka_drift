@@ -135,6 +135,20 @@ def test_final_and_playoff_are_centred():
     assert layout.slots[("FINAL", "top")].bottom < layout.slots[("FINAL", "bottom")].y
 
 
+def test_semifinals_connect_to_final_and_playoff():
+    bracket = create_bracket([None] * 32)
+    layout = compute_layout(bracket)
+
+    for match_id in ("T4_1", "T4_2"):
+        match = bracket.matches[match_id]
+        assert match.winner_goes_to is not None
+        assert match.loser_goes_to is not None
+        for destination in (match.winner_goes_to, match.loser_goes_to):
+            target = layout.slots[destination]
+            target_edges = {(target.x, target.cy), (target.right, target.cy)}
+            assert any(points[-1] in target_edges for points in layout.connectors)
+
+
 # --- slot_state ---------------------------------------------------------------
 
 def test_slot_state_classification():

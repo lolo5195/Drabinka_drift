@@ -247,16 +247,6 @@ def compute_layout(
     layout.slot_align[("FINAL", "top")] = layout.slot_align[("FINAL", "bottom")] = "center"
     layout.labels.append(Label("FINAŁ", center_x, final_top.y - st.label_size, st.label_size))
 
-    # Semi-final winners -> FINAL rows, with a symmetric elbow on each side.
-    for match_id, left, row in (("T4_1", True, final_top), ("T4_2", False, final_bottom)):
-        a = layout.slots[(match_id, "top")]
-        b = layout.slots[(match_id, "bottom")]
-        x_edge, x_line = (a.right, a.right + st.stub) if left else (a.x, a.x - st.stub)
-        layout.connectors.append([(x_edge, a.cy), (x_line, a.cy), (x_line, b.cy), (x_edge, b.cy)])
-        x_elbow = box_x - st.center_gap if left else box_x + st.center_w + st.center_gap
-        x_target = box_x if left else box_x + st.center_w
-        layout.connectors.append([(x_line, y_mid), (x_elbow, y_mid), (x_elbow, row.cy), (x_target, row.cy)])
-
     playoff_label_y = final_bottom.bottom + st.center_block_gap
     playoff_top_y = playoff_label_y + st.label_size
     layout.labels.append(Label("PLAY-OFF · 3. MIEJSCE", center_x, playoff_label_y, st.label_size))
@@ -265,6 +255,27 @@ def compute_layout(
         box_x, playoff_top_y + st.slot_h + st.center_divider, st.center_w, st.slot_h,
     )
     layout.slot_align[("PLAYOFF", "top")] = layout.slot_align[("PLAYOFF", "bottom")] = "center"
+
+    # Each semi-final feeds both centre matches: its winner goes to FINAL and
+    # its loser to PLAY-OFF. Follow the bracket wiring rather than duplicating
+    # those destination slots here.
+    for match_id, left in (("T4_1", True), ("T4_2", False)):
+        match = bracket.matches[match_id]
+        if match.winner_goes_to is None or match.loser_goes_to is None:
+            raise ValueError(f"{match_id} has incomplete centre destinations")
+        a = layout.slots[(match_id, "top")]
+        b = layout.slots[(match_id, "bottom")]
+        x_edge, x_line = (a.right, a.right + st.stub) if left else (a.x, a.x - st.stub)
+        junction_y = (a.cy + b.cy) / 2
+        x_elbow = box_x - st.center_gap if left else box_x + st.center_w + st.center_gap
+        layout.connectors.append([(x_edge, a.cy), (x_line, a.cy), (x_line, b.cy), (x_edge, b.cy)])
+        layout.connectors.append([(x_line, junction_y), (x_elbow, junction_y)])
+        for destination in (match.winner_goes_to, match.loser_goes_to):
+            target = layout.slots[destination]
+            x_target = target.x if left else target.right
+            layout.connectors.append(
+                [(x_elbow, junction_y), (x_elbow, target.cy), (x_target, target.cy)],
+            )
 
     podium_label_y = layout.slots[("PLAYOFF", "bottom")].bottom + st.center_block_gap
     layout.labels.append(Label("PODIUM", center_x, podium_label_y, st.label_size))

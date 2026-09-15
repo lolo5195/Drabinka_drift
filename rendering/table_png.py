@@ -78,12 +78,10 @@ class TableStyle:
 def score_weights(run1: int, run2: int) -> tuple[Weight, Weight]:
     """Font weights for the two runs: the better run is bold.
 
-    Equal positive runs (81/81) are both bold — there is no "worse" run to
-    demote. Two zeros are both regular: nothing to highlight in a (0, 0).
+    Equal runs are both bold — there is no "worse" run to demote.
     """
     if run1 == run2:
-        both: Weight = "bold" if run1 > 0 else "regular"
-        return both, both
+        return "bold", "bold"
     return ("bold", "regular") if run1 > run2 else ("regular", "bold")
 
 
