@@ -7,7 +7,8 @@ tickets (T-09..T-16) extend the state in exactly one place.
 
 from dataclasses import dataclass, field
 
-from models import QualificationResult, TournamentBracket
+from logic.qualification import split_standings
+from models import Driver, QualificationResult, TournamentBracket
 
 # Tab names are both the values of `ui.tabs` and the labels the operator sees.
 TAB_QUALIFICATION = "Kwalifikacje"
@@ -64,3 +65,21 @@ class AppState:
             return False
         self.entries.append(EntryRow(driver_id=len(self.entries) + 1))
         return True
+
+    def generate_results(self) -> None:
+        """Rebuild both standings tables from the typed rows ("Generuj wyniki").
+
+        Only here does an empty score become 0 (PLAN §4.1). Unnamed rows are
+        passed on as well: `split_standings` already drops them (T-04), so
+        that rule stays in one place. `bracket` is not touched - it changes
+        only through its own confirmed regeneration (PLAN §4.1, T-11).
+        """
+        results = [
+            QualificationResult(
+                driver=Driver(id=row.driver_id, name=row.name.strip()),
+                run1=row.run1 or 0,
+                run2=row.run2 or 0,
+            )
+            for row in self.entries
+        ]
+        self.main_standings, self.extra_standings = split_standings(results)
