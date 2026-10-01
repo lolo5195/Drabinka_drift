@@ -5,17 +5,22 @@ from nicegui import ui
 from nicegui.testing import User
 
 from models import Driver, QualificationResult, TournamentBracket
-from ui.results_view import GENERATE_LABEL
+from ui.results_view import GENERATE_LABEL, INVALID_SCORES_MESSAGE
 from ui.state import TAB_QUALIFICATION, TAB_RESULTS, AppState, EntryRow
 
 
 # --- AppState.generate_results: plain unit tests, no GUI ---------------------
 
+def _typed(score: int | None) -> str:
+    """The text of a score field: the digits, or "" for a field left empty."""
+    return "" if score is None else str(score)
+
+
 def _state(*rows: tuple[str, int | None, int | None]) -> AppState:
     """AppState whose entry table holds `rows` as (name, run1, run2), ids 1..n."""
     state = AppState()
     state.entries = [
-        EntryRow(driver_id=row_id, name=name, run1=run1, run2=run2)
+        EntryRow(driver_id=row_id, name=name, run1=_typed(run1), run2=_typed(run2))
         for row_id, (name, run1, run2) in enumerate(rows, start=1)
     ]
     return state
@@ -78,6 +83,34 @@ def test_generate_results_converts_typed_rows():
     assert state.main_standings[1:] == [None] * 31
     # A name without scores becomes (0, 0) and goes to the 33+ table.
     assert state.extra_standings == [QualificationResult(Driver(3, "Piotr Nowak #12"), 0, 0)]
+
+
+def test_rows_with_invalid_scores_lists_their_numbers():
+    state = AppState()
+    state.entries = [
+        EntryRow(driver_id=1, name="Jan Kowalski #77", run1="811", run2="76"),   # typo for 81
+        EntryRow(driver_id=2, name="Piotr Nowak #12", run1="80", run2=""),       # valid, run 2 empty
+        EntryRow(driver_id=3, name="Adam Wiśniewski #5", run1="", run2="abc"),
+        EntryRow(driver_id=4),                                                   # the empty last row
+    ]
+
+    assert state.rows_with_invalid_scores() == [1, 3]
+
+
+def test_edits_mark_results_outdated_only_after_generation():
+    state = _state(("Jan Kowalski #77", 81, 76))
+
+    state.mark_entries_changed()
+    assert state.results_outdated is False   # nothing generated yet
+
+    state.generate_results()
+    assert state.results_outdated is False
+
+    state.mark_entries_changed()
+    assert state.results_outdated is True
+
+    state.generate_results()
+    assert state.results_outdated is False
 
 
 def test_generate_results_leaves_bracket_untouched():
@@ -204,3 +237,40 @@ async def test_generate_again_reflects_corrected_scores(user: User) -> None:
     await user.should_see(marker="result-name-1", content="Piotr Nowak #12")
     assert _label(user, "result-name-2").text == "Jan Kowalski #77"
     await user.should_not_see(marker="extra-standings")
+
+
+async def test_invalid_score_blocks_generation_until_fixed(user: User) -> None:
+    await user.open("/")
+    _enter(user, 1, "Jan Kowalski #77", "811", "76")   # typo for 81
+    _enter(user, 2, "Piotr Nowak #12", "80")
+
+    _generate(user)
+
+    # No table: counting the typo as 0 would put Jan behind Piotr.
+    await user.should_see(f"{INVALID_SCORES_MESSAGE} 1")
+    await user.should_see("Wyniki nie zostały jeszcze wygenerowane.")
+
+    user.find(kind=ui.tab, content=TAB_QUALIFICATION).click()
+    user.find(marker="run1-1").clear().type("81")
+    _generate(user)
+
+    await user.should_see(marker="result-name-1", content="Jan Kowalski #77")
+    assert _label(user, "result-run1-1").text == "81"
+
+
+async def test_outdated_warning_shows_after_edit_until_generated_again(user: User) -> None:
+    await user.open("/")
+    _enter(user, 1, "Jan Kowalski #77", "81")
+    await user.should_not_see(marker="results-outdated")   # nothing generated yet
+
+    _generate(user)
+    await user.should_see(marker="result-name-1")
+    await user.should_not_see(marker="results-outdated")
+
+    # A score added after generation: the table on screen is now stale.
+    user.find(kind=ui.tab, content=TAB_QUALIFICATION).click()
+    user.find(marker="run2-1").type("90")
+    await user.should_see(marker="results-outdated")
+
+    _generate(user)
+    await user.should_not_see(marker="results-outdated")

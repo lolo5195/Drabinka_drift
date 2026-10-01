@@ -363,6 +363,7 @@ Szacunki przy pracy ~2–3 h dziennie. Po każdym tickecie: commit + zielone `py
 - Pełny remis (identyczne obie noty, np. dwóch z 81/76) — co decyduje? Propozycja: kolejność wpisania.
 - Ponad 32 zawodników z wynikiem dodatnim — czy nadmiar spada do tabeli 33+?
 - Równe przejazdy jednego zawodnika (81/81) — pogrubić oba?
+- Wynik `(0,0)` w tabeli 33+ — reguła „równe = oba pogrubione” pogrubia tam wszystkie zera; czy klient tego chce, czy zera mają być bez pogrubienia?
 
 ### 4.3 Testowanie drabinki przypadkami brzegowymi
 

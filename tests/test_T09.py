@@ -4,7 +4,8 @@ import pytest
 from nicegui import ui
 from nicegui.testing import User
 
-from ui.qualification_view import SCORE_ERROR, is_valid_score, parse_score
+from logic.qualification import is_valid_score, parse_score
+from ui.qualification_view import SCORE_ERROR
 from ui.state import AppState, EntryRow
 
 
@@ -14,7 +15,7 @@ def test_app_state_starts_with_two_empty_rows():
     state = AppState()
 
     assert state.entries == [EntryRow(driver_id=1), EntryRow(driver_id=2)]
-    assert state.entries[0].run1 is None and state.entries[0].run2 is None
+    assert state.entries[0].run1 == "" and state.entries[0].run2 == ""
 
 
 def test_row_is_added_only_when_last_row_gets_a_name():
@@ -147,7 +148,7 @@ async def test_editing_earlier_row_works_and_adds_no_rows(user: User) -> None:
 
 
 @pytest.mark.parametrize("text", ["abc", "-5", "101"])
-async def test_invalid_score_shows_error_and_is_not_stored(user: User, text: str) -> None:
+async def test_invalid_score_shows_error_and_survives_reload(user: User, text: str) -> None:
     await user.open("/")
 
     # Character by character: "101" passes through the valid "10" on the way,
@@ -157,8 +158,9 @@ async def test_invalid_score_shows_error_and_is_not_stored(user: User, text: str
     assert _field(user, "run1-1").error == SCORE_ERROR
 
     await user.open("/")
-    # AppState got None, so the rebuilt field is empty and has no error.
-    assert _field(user, "run1-1").value == ""
+    # AppState keeps the text as typed, so the rebuilt field shows it still red.
+    assert _field(user, "run1-1").value == text
+    assert _field(user, "run1-1").error == SCORE_ERROR
 
 
 async def test_valid_score_is_stored(user: User) -> None:

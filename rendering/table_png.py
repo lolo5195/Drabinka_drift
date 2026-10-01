@@ -25,6 +25,7 @@ from math import ceil
 
 from PIL import Image
 
+from logic.qualification import MAIN_PLACES
 from models import QualificationResult
 from rendering.style import (
     CLIENT_LIGHT,
@@ -44,7 +45,7 @@ HEADERS: tuple[str, str, str, str] = (
 )
 
 #: Numbering of the first row in the 33+ table (PLAN §2.1).
-EXTRA_FIRST_PLACE = 33
+EXTRA_FIRST_PLACE = MAIN_PLACES + 1
 
 
 @dataclass(frozen=True)

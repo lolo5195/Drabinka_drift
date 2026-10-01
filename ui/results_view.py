@@ -12,6 +12,9 @@ from rendering.table_png import EXTRA_FIRST_PLACE, HEADERS, score_weights
 from ui.state import AppState
 
 GENERATE_LABEL = "Generuj wyniki"
+INVALID_SCORES_MESSAGE = "Popraw wyniki w wierszach:"
+OUTDATED_MESSAGE = ("Kwalifikacje zmieniły się od ostatniego generowania — "
+                    "kliknij „Generuj wyniki”, aby odświeżyć tabelę.")
 
 # Miejsce | name | run 1 | run 2: the name column takes all the remaining width.
 GRID_COLUMNS = "5rem 1fr 10rem 10rem"
@@ -35,10 +38,20 @@ def build_results_view(state: AppState) -> None:
                 .classes("mt-6").mark("extra-standings")
 
     def on_generate() -> None:
+        invalid_rows = state.rows_with_invalid_scores()
+        if invalid_rows:
+            # Generating anyway would count each typo as 0 and silently
+            # change the order, and with it the bracket seeding.
+            rows = ", ".join(str(row_id) for row_id in invalid_rows)
+            ui.notify(f"{INVALID_SCORES_MESSAGE} {rows}", type="negative")
+            return
         state.generate_results()
         standings.refresh()
 
     ui.button(GENERATE_LABEL, on_click=on_generate)
+    # Bound, not refreshed: the flag changes on the other tab while typing.
+    ui.label(OUTDATED_MESSAGE).classes("text-orange-700 font-bold") \
+        .bind_visibility_from(state, "results_outdated").mark("results-outdated")
     standings()
 
 
