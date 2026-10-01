@@ -3,6 +3,7 @@
 from nicegui import ui
 from nicegui.events import ValueChangeEventArguments
 
+from logic.qualification import is_valid_score
 from ui.state import AppState, EntryRow
 
 SCORE_ERROR = "Wpisz liczbę całkowitą 0–100"
@@ -10,22 +11,6 @@ SCORE_ERROR = "Wpisz liczbę całkowitą 0–100"
 # L.p. | name | run 1 | run 2: the name column takes all the remaining width.
 GRID_COLUMNS = "3rem 1fr 8rem 8rem"
 HEADERS = ("L.p.", "Imię i nazwisko nr startowy", "Wynik 1", "Wynik 2")
-
-
-def is_valid_score(text: str | None) -> bool:
-    """True for an empty field or an integer 0-100 written with digits only.
-
-    The digit-only check rejects "-5", "+5", "8.5", "1e2" and letters before
-    int() sees them; isascii() also rules out Unicode digits such as "²".
-    """
-    text = (text or "").strip()
-    return text == "" or (text.isascii() and text.isdigit() and int(text) <= 100)
-
-
-def parse_score(text: str | None) -> int | None:
-    """Return the value kept in AppState: the score, or None if empty or invalid."""
-    text = (text or "").strip()
-    return int(text) if text and is_valid_score(text) else None
 
 
 def build_qualification_view(state: AppState) -> None:
@@ -46,6 +31,7 @@ def _build_row(state: AppState, grid: ui.grid, row: EntryRow) -> None:
 
     def on_name_change(e: ValueChangeEventArguments) -> None:
         row.name = e.value or ""
+        state.mark_entries_changed()
         if state.add_row_if_last_named():
             # Append only the new cells. Rebuilding the grid (ui.refreshable)
             # would delete the field being typed in, losing focus and keystrokes.
@@ -58,19 +44,28 @@ def _build_row(state: AppState, grid: ui.grid, row: EntryRow) -> None:
         placeholder="np. Jan Kowalski #77",
         on_change=on_name_change,
     ).mark(f"name-{row.driver_id}")
-    _score_input(row, "run1")
-    _score_input(row, "run2")
+    _score_input(state, row, "run1")
+    _score_input(state, row, "run2")
 
 
-def _score_input(row: EntryRow, attribute: str) -> ui.input:
+def _score_input(state: AppState, row: EntryRow, attribute: str) -> ui.input:
     """Create the field for `row.run1` or `row.run2` (`attribute` names which).
 
-    An invalid value turns the field red with SCORE_ERROR and stores None, so
-    AppState never holds a score the operator did not type correctly.
+    The text goes to AppState exactly as typed. An invalid value turns the
+    field red with SCORE_ERROR, and "Generuj wyniki" refuses to run until the
+    operator fixes it - it is never silently counted as 0.
     """
-    current = getattr(row, attribute)
-    return ui.input(
-        value="" if current is None else str(current),
+
+    def on_change(e: ValueChangeEventArguments) -> None:
+        setattr(row, attribute, e.value or "")
+        state.mark_entries_changed()
+
+    field = ui.input(
+        value=getattr(row, attribute),
         validation={SCORE_ERROR: is_valid_score},
-        on_change=lambda e: setattr(row, attribute, parse_score(e.value)),
+        on_change=on_change,
     ).mark(f"{attribute}-{row.driver_id}")
+    # NiceGUI validates only on change: after F5 the rebuilt field must show
+    # the error for an invalid value it starts with.
+    field.validate()
+    return field
